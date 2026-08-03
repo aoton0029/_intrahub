@@ -1,0 +1,13 @@
+name: intrahub
+
+include:
+  - services/caddy/compose.yaml
+  - services/mediavault/compose.yaml
+  - services/vllm/compose.yaml
+  - services/litellm/compose.yaml
+  - services/hermes-agent/compose.yaml
+  - services/open-deep-research/compose.yaml
+  - services/mastra/compose.yaml
+  - services/monitoring/compose.yaml
+  - services/samba/compose.yaml
+  - services/bookmarks/compose.yaml

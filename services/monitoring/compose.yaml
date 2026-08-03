@@ -1,0 +1,27 @@
+services:
+  beszel:
+    image: henrygd/beszel
+    container_name: beszel
+    restart: unless-stopped
+    volumes:
+      - ${DATA_ROOT:?}/db/beszel:/beszel_data
+    networks:
+      - monitoring-net
+      - proxy-net
+
+  beszel-agent:
+    image: henrygd/beszel-agent
+    container_name: beszel-agent
+    restart: unless-stopped
+    environment:
+      KEY: ${BESZEL_AGENT_KEY:?}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - monitoring-net
+
+networks:
+  monitoring-net:
+    driver: bridge
+  proxy-net:
+    external: true

@@ -1,0 +1,5 @@
+# 秘密情報はコミットしない（*.example をコピーして実ファイルを作る）
+.env
+.env.*
+!.env.example
+services/bookmarks/config.yml

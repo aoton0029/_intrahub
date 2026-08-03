@@ -1,0 +1,104 @@
+services:
+  mediavault-postgres:
+    image: postgres:16
+    container_name: mediavault-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      TZ: ${TZ:?}
+    volumes:
+      - ${MEDIAVAULT_ROOT:?}/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?} -d ${POSTGRES_DB:?}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - db-net
+
+  mediavault-api:
+    image: ghcr.io/aoton0029/intrahub-mediavault-api:0.1.0
+    container_name: mediavault-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@mediavault-postgres:5432/${POSTGRES_DB:?}
+      STORAGE_ROOT: /srv/mediavault
+      # /internal/* のBearer認証キー。未設定だと空文字となり内部APIが無認証になるため必須扱い
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?}
+      # 単一オリジンのみ指定可。不正値は起動時panic
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?}
+      # 外部メタデータAPIの認証情報（未設定のプロバイダは起動時seedをスキップする）
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      STEAM_API_KEY: ${STEAM_API_KEY:-}
+      STEAM_USER_ID: ${STEAM_USER_ID:-}
+      IGDB_CLIENT_ID: ${IGDB_CLIENT_ID:-}
+      IGDB_CLIENT_SECRET: ${IGDB_CLIENT_SECRET:-}
+      ANNICT_ACCESS_TOKEN: ${ANNICT_ACCESS_TOKEN:-}
+      RAKUTEN_APPLICATION_ID: ${RAKUTEN_APPLICATION_ID:-}
+      RAKUTEN_ACCESS_KEY: ${RAKUTEN_ACCESS_KEY:-}
+    volumes:
+      - ${MEDIAVAULT_ROOT:?}:/srv/mediavault
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      mediavault-postgres:
+        condition: service_healthy
+    networks:
+      db-net:
+      proxy-net:
+        # mediavault-web の nginx.conf は upstream を `backend` というホスト名で参照する
+        # （アプリリポジトリのローカル結合環境のサービス名に合わせてある）。本番のサービス名は
+        # mediavault-api なので、nginx.conf を環境ごとに分けずに済むようエイリアスを与える。
+        aliases:
+          - backend
+
+  mediavault-web:
+    image: ghcr.io/aoton0029/intrahub-mediavault-web:0.1.0
+    container_name: mediavault-web
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:?}
+    depends_on:
+      mediavault-api:
+        condition: service_healthy
+    networks:
+      - proxy-net
+
+  # mediavault-worker:
+  #   image: ghcr.io/aoton0029/intrahub-mediavault-worker:0.1.0
+  #   container_name: mediavault-worker
+  #   restart: unless-stopped
+  #   environment:
+  #     DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@mediavault-postgres:5432/${POSTGRES_DB:?}
+  #     LLM_BASE_URL: ${LLM_BASE_URL:-}
+  #     LLM_API_KEY: ${LLM_API_KEY:-}
+  #   depends_on:
+  #     mediavault-postgres:
+  #       condition: service_healthy
+  #     mediavault-api:
+  #       condition: service_healthy
+  #   networks:
+  #     - db-net
+
+  # mediavault-mcp:
+  #   image: ghcr.io/aoton0029/intrahub-mediavault-mcp:0.1.0
+  #   container_name: mediavault-mcp
+  #   restart: unless-stopped
+  #   environment:
+  #     MEDIAVAULT_API_BASE_URL: http://mediavault-api:8080
+  #   depends_on:
+  #     mediavault-api:
+  #       condition: service_healthy
+  #   networks:
+  #     - proxy-net
+
+networks:
+  db-net:
+    driver: bridge
+  proxy-net:
+    external: true
