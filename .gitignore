@@ -3,3 +3,6 @@
 .env.*
 !.env.example
 services/bookmarks/config.yml
+
+# 次期構成の実行時設定・秘密情報。テンプレートだけを services/*/config で管理する。
+runtime/

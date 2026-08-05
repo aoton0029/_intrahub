@@ -1,0 +1,35 @@
+# 大容量データをホストの実ディスクへ置くための、任意の上書き定義。
+#
+# 既定（compose.yaml のみ）では全ての永続データが named volume に載り、実体は Docker の
+# data-root 配下に置かれる。SMB共有の原本・MediaVault ストレージ・モデルキャッシュだけを
+# 別の物理ディスクへ逃がしたいときにこのファイルを重ねる。
+#
+#   docker compose -f compose.yaml -f compose.bind.yaml up -d
+#
+# .env に COMPOSE_PATH_SEPARATOR=: と COMPOSE_FILE=compose.yaml:compose.bind.yaml を
+# 書いておけば、以後は素の docker compose で効く。
+#
+# BULK_ROOT 配下のレイアウトはここで固定する。入力変数は BULK_ROOT の1つだけに保つ。
+# o: bind の device は起動時に存在しないとマウントに失敗するので、この3つは先に掘っておく
+# （shares/ の中のカテゴリは shares-init が掘るので触らなくてよい）。
+#
+#   mkdir -p ${BULK_ROOT}/{shares,mediavault,cache/vllm}
+#   sudo chown -R 1000:1000 ${BULK_ROOT}/shares
+#   sudo chown -R 2000:0 ${BULK_ROOT}/cache/vllm
+
+volumes:
+  shares:
+    driver_opts:
+      type: none
+      o: bind
+      device: ${BULK_ROOT:?}/shares
+  mediavault-storage:
+    driver_opts:
+      type: none
+      o: bind
+      device: ${BULK_ROOT:?}/mediavault
+  vllm-cache:
+    driver_opts:
+      type: none
+      o: bind
+      device: ${BULK_ROOT:?}/cache/vllm

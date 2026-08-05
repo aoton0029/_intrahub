@@ -1,4 +1,0 @@
-mastra.{$BASE_DOMAIN} {
-	import access_log
-	reverse_proxy mastra:4111
-}

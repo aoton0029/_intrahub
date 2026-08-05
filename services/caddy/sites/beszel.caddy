@@ -1,4 +1,0 @@
-beszel.{$BASE_DOMAIN} {
-	import access_log
-	reverse_proxy beszel:8090
-}

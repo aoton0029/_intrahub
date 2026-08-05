@@ -1,4 +1,0 @@
-users:
-  - username: REPLACE_ME
-    password: REPLACE_ME
-    scope: /data

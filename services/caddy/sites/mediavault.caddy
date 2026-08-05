@@ -1,9 +1,0 @@
-mediavault.{$BASE_DOMAIN} {
-	import access_log
-	handle /api/* {
-		reverse_proxy mediavault-api:8080
-	}
-	handle {
-		reverse_proxy mediavault-web:80
-	}
-}

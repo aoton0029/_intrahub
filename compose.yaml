@@ -1,8 +1,9 @@
 name: intrahub
 
 include:
-  - services/caddy/compose.yaml
   - services/mediavault/compose.yaml
+  - services/jellyfin/compose.yaml
+  - services/calibre-web/compose.yaml
   - services/vllm/compose.yaml
   - services/litellm/compose.yaml
   - services/hermes-agent/compose.yaml
