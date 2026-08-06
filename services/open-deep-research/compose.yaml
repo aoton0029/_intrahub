@@ -1,0 +1,83 @@
+services:
+  odr-postgres:
+    image: postgres:16.9-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: odr
+      POSTGRES_DB: odr
+      POSTGRES_PASSWORD: ${ODR_DB_PASSWORD:?ODR_DB_PASSWORD is required}
+    volumes:
+      - ${ODR_PGDATA_SOURCE:-odr-pgdata}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odr -d odr"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - research-data
+
+  odr-redis:
+    image: redis:7.4.5-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ${ODR_REDIS_SOURCE:-odr-redis-data}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - research-data
+
+  open-deep-research:
+    image: ghcr.io/aoton0029/open-deep-research:0.1.0
+    restart: unless-stopped
+    user: "${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000}"
+    environment:
+      LITELLM_BASE_URL: http://litellm:4000/v1
+      MEDIAVAULT_API_BASE_URL: http://mediavault-api:8080
+      LLM_MODEL: ${ODR_LLM_MODEL:?ODR_LLM_MODEL is required}
+      REDIS_URI: redis://odr-redis:6379
+      DATABASE_URI: postgresql://odr:${ODR_DB_PASSWORD:?ODR_DB_PASSWORD is required}@odr-postgres:5432/odr?sslmode=disable
+      LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY is required}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:8000:8000"
+    volumes:
+      - ${LIBRARY_SOURCE:-shares}:/library
+      - ${AI_WORKSPACE_SOURCE:-ai-workspace}:/workspace
+    depends_on:
+      odr-postgres:
+        condition: service_healthy
+      odr-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - research-data
+      - llm-api
+      - mediavault-api
+
+networks:
+  research-data:
+    internal: true
+  llm-api:
+  mediavault-api:
+
+volumes:
+  odr-pgdata:
+  odr-redis-data:
+  shares:
+  ai-workspace:

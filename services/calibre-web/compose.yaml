@@ -1,0 +1,25 @@
+services:
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:0.6.26-ls379
+    restart: unless-stopped
+    environment:
+      PUID: ${LIBRARY_UID:-1000}
+      PGID: ${LIBRARY_GID:-1000}
+      TZ: ${TZ:-UTC}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:8083:8083"
+    volumes:
+      - ${CALIBRE_CONFIG_SOURCE:-calibre-config}:/config
+      - ${LIBRARY_SOURCE:-shares}:/library
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8083/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  calibre-config:
+  shares:

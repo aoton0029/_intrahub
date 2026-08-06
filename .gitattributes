@@ -1,1 +1,6 @@
 # Linux サーバー上で実行するものは、作業環境の OS に関わらず LF で取り出す。
+*.sh text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+Dockerfile* text eol=lf
+Caddyfile* text eol=lf

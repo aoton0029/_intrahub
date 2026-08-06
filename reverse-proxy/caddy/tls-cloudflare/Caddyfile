@@ -1,0 +1,53 @@
+{
+    email {$ACME_EMAIL}
+}
+
+(intrahub) {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+    encode zstd gzip
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 100MiB
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+    }
+}
+
+mediavault.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8080
+}
+
+bookmarks.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8082
+}
+
+calibre.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8083
+}
+
+jellyfin.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8096
+}
+
+litellm.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:4000
+}
+
+mastra.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:4111
+}
+
+research.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8000
+}

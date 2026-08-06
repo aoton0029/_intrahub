@@ -1,0 +1,26 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:10.11.11
+    restart: unless-stopped
+    user: "${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000}"
+    environment:
+      TZ: ${TZ:-UTC}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:8096:8096"
+    volumes:
+      - ${JELLYFIN_CONFIG_SOURCE:-jellyfin-config}:/config
+      - ${JELLYFIN_CACHE_SOURCE:-jellyfin-cache}:/cache
+      - ${LIBRARY_SOURCE:-shares}:/library:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8096/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  jellyfin-config:
+  jellyfin-cache:
+  shares:

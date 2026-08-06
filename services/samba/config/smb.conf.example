@@ -1,0 +1,7 @@
+# 参考用。標準構成はdockurr/sambaの環境変数インターフェースを利用する。
+[Library]
+  path = /storage
+  browseable = yes
+  read only = no
+  create mask = 0664
+  directory mask = 2775

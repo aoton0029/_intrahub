@@ -1,0 +1,66 @@
+services:
+  hermes-postgres:
+    image: postgres:16.9-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hermes
+      POSTGRES_DB: hermes
+      POSTGRES_PASSWORD: ${HERMES_DB_PASSWORD:?HERMES_DB_PASSWORD is required}
+    volumes:
+      - ${HERMES_PGDATA_SOURCE:-hermes-pgdata}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hermes -d hermes"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - hermes-db
+
+  hermes-agent:
+    image: nousresearch/hermes-agent:1
+    restart: unless-stopped
+    user: "${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000}"
+    environment:
+      TZ: ${TZ:-UTC}
+      HERMES_WRITE_SAFE_ROOT: /library
+      LITELLM_BASE_URL: http://litellm:4000/v1
+      MEDIAVAULT_API_BASE_URL: http://mediavault-api:8080
+      LLM_MODEL: ${HERMES_LLM_MODEL:-openai}
+      LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY is required}
+      HERMES_DB_URL: postgresql://hermes:${HERMES_DB_PASSWORD:?HERMES_DB_PASSWORD is required}@hermes-postgres:5432/hermes
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    volumes:
+      - ${HERMES_DATA_SOURCE:-hermes-db}:/data
+      - ${LIBRARY_SOURCE:-shares}:/library
+      - ${AI_WORKSPACE_SOURCE:-ai-workspace}:/workspace
+    depends_on:
+      hermes-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz', timeout=3)\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - hermes-db
+      - llm-api
+      - mediavault-api
+
+networks:
+  hermes-db:
+    internal: true
+  llm-api:
+  mediavault-api:
+
+volumes:
+  hermes-db:
+  hermes-pgdata:
+  shares:
+  ai-workspace:

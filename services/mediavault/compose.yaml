@@ -1,0 +1,83 @@
+services:
+  mediavault-postgres:
+    image: postgres:16.9-alpine
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-UTC}
+      POSTGRES_USER: mediavault
+      POSTGRES_DB: mediavault
+      POSTGRES_PASSWORD: ${MEDIAVAULT_DB_PASSWORD:?MEDIAVAULT_DB_PASSWORD is required}
+    volumes:
+      - ${MEDIAVAULT_DB_SOURCE:-mediavault-db}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-mediavault} -d $${POSTGRES_DB:-mediavault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - media-db
+
+  mediavault-api:
+    image: ghcr.io/aoton0029/intrahub-mediavault-api:0.1.0
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://mediavault:${MEDIAVAULT_DB_PASSWORD:?MEDIAVAULT_DB_PASSWORD is required}@mediavault-postgres:5432/mediavault
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      STEAM_API_KEY: ${STEAM_API_KEY:-}
+      STEAM_USER_ID: ${STEAM_USER_ID:-}
+      IGDB_CLIENT_ID: ${IGDB_CLIENT_ID:-}
+      IGDB_CLIENT_SECRET: ${IGDB_CLIENT_SECRET:-}
+      ANNICT_ACCESS_TOKEN: ${ANNICT_ACCESS_TOKEN:-}
+      RAKUTEN_APPLICATION_ID: ${RAKUTEN_APPLICATION_ID:-}
+      RAKUTEN_ACCESS_KEY: ${RAKUTEN_ACCESS_KEY:-}
+      STORAGE_ROOT: /srv/mediavault
+      LIBRARY_ROOT: /library
+      CORS_ALLOWED_ORIGIN: ${MEDIAVAULT_ALLOWED_ORIGIN:-http://127.0.0.1:8080}
+    volumes:
+      - ${MEDIAVAULT_STORAGE_SOURCE:-mediavault-storage}:/srv/mediavault
+      - ${LIBRARY_SOURCE:-shares}:/library
+    depends_on:
+      mediavault-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mediavault-api
+      - media-db
+
+  mediavault-web:
+    image: ghcr.io/aoton0029/intrahub-mediavault-web:0.1.0
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-UTC}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:8080:80"
+    depends_on:
+      mediavault-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mediavault-api
+
+networks:
+  mediavault-api:
+  media-db:
+    internal: true
+
+volumes:
+  mediavault-db:
+  mediavault-storage:
+  shares:

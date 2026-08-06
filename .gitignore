@@ -1,8 +1,6 @@
-# 秘密情報はコミットしない（*.example をコピーして実ファイルを作る）
+# .envは秘密情報を含む。
 .env
 .env.*
 !.env.example
-services/bookmarks/config.yml
-
-# 次期構成の実行時設定・秘密情報。テンプレートだけを services/*/config で管理する。
-runtime/
+compose.local.yaml
+backups/

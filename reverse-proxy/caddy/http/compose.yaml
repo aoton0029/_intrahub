@@ -1,0 +1,24 @@
+name: intrahub-caddy-http
+
+services:
+  caddy:
+    image: caddy:2.11.4
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - path: .env
+        required: false
+    command: ["run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${CADDY_LOG_SOURCE:-caddy-http-logs}:/var/log/caddy
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy-http-logs:

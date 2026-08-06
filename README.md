@@ -1,43 +1,35 @@
 # IntraHub
 
-IntraHub は、メディア管理・LLM・エージェント関連のコンテナ群を、1台のLinuxホストで運用するためのDocker Composeプロジェクトです。
+メディア管理とAIサービスを1台のLinuxホストで動かすDocker Compose構成です。設定はルートの`.env`へ集約し、DNS・TLS・Caddy等のリバースプロキシは利用者側で管理します。
 
-現在は次期構成への再設計中です。実装の基準となる[構成設計](./docs/architecture.md)と[環境変数一覧](./docs/configuration.md)を参照してください。現存するComposeファイルは、まだこの設計に準拠していない場合があります。
-
-## 設計の要点
-
-- 標準構成はDocker named volumeとループバック公開を使い、実環境固有のパスやリバースプロキシを要求しない
-- Webサービスは安定したホストポートを持ち、直接利用も任意のリバースプロキシ経由の利用もできる
-- DNS・TLS・Caddyなどのリバースプロキシは利用者が管理する
-- 永続データの配置は任意のCompose上書きでホストストレージへ変更できる
-- ファイルを扱うAIエージェントは共有ライブラリを読み書きし、LiteLLM／vLLMにはmountしない
-- Mastra・Hermes・ODRは内部ネットワークからMediaVault APIを利用し、DBへ直接接続しない
-- LiteLLMはAnthropic／OpenAIを論理モデル名で公開し、AIクライアントから切り替えられる
-- 設定テンプレートは`services/<name>/config/`、実値と秘密情報はgitignoreされた`runtime/`へ分離する
-- GPUや外部プロバイダに依存するサービスは追加Composeファイルへ分離する
-- データベースや内部APIはホストへ公開しない
-
-## 目標の起動方法
-
-標準構成:
+## 起動
 
 ```sh
 cp .env.example .env
-./scripts/bootstrap.sh
-./scripts/validate.sh
+$EDITOR .env
+docker compose config --quiet
 docker compose up -d
 ```
 
-ホストストレージを使う場合:
+`.env`の空欄になっているpassword、token、API key、`<model-id>`を実値へ変更してください。秘密値は必要に応じて`openssl rand -hex 32`などで生成します。`.env`はGit管理外とし、Linuxでは`chmod 600 .env`を設定します。
+
+## 拡張
 
 ```sh
-docker compose -f compose.yaml -f compose.storage.yaml up -d
+# vLLM
+docker compose -f compose.yaml -f compose.vllm.yaml up -d
+
+# Research
+docker compose -f compose.yaml -f compose.research.yaml up -d
+
+# vLLM＋Research
+docker compose -f compose.yaml -f compose.vllm.yaml -f compose.research.yaml up -d
 ```
 
-GPU拡張を使う場合:
+すべての永続データは`.env`の`*_SOURCE`で保存先を選択します。テンプレートの既定値はnamed volume、`/mnt/library`のような絶対パスはbind mountです。bind mountを使う場合は、起動前にホスト側ディレクトリと書込み権限を用意します。
 
-```sh
-docker compose -f compose.yaml -f compose.gpu.yaml up -d
-```
+公開ポートはMediaVault `8080`、Bookmarks `8082`、Calibre-Web `8083`、Jellyfin `8096`、LiteLLM `4000`、Mastra `4111`、Samba `445`です。Research有効時だけODR `8000`を追加します。DB、Redis、MediaVault API、Hermes、vLLMはホストへ公開しません。
 
-これらは目標インターフェースであり、再実装が完了するまでは利用できない場合があります。
+サービス別の補足は`services/<name>/README.md`を参照してください。実環境固有のパス、DNS、リバースプロキシ、バックアップ手順はデプロイ先のリポジトリで管理します。
+
+Caddyを前段へ置く場合は、HTTP基本構成とTLS/Cloudflare拡張を分けた[reverse-proxy/caddy](./reverse-proxy/caddy/README.md)を利用できます。CaddyはIntraHub本体のComposeには含まれません。

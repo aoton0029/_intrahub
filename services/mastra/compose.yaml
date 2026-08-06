@@ -1,0 +1,38 @@
+services:
+  mastra:
+    image: ghcr.io/aoton0029/intrahub-mastra:0.1.0
+    restart: unless-stopped
+    user: "${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000}"
+    environment:
+      TZ: ${TZ:-UTC}
+      LITELLM_BASE_URL: http://litellm:4000/v1
+      MEDIAVAULT_API_BASE_URL: http://mediavault-api:8080
+      LLM_MODEL: ${MASTRA_LLM_MODEL:-anthropic}
+      LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY is required}
+      TURSO_DATABASE_URL: file:/app/data/mastra.db
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:4111:4111"
+    volumes:
+      - ${MASTRA_DATA_SOURCE:-mastra-data}:/app/data
+      - ${LIBRARY_SOURCE:-shares}:/library
+      - ${AI_WORKSPACE_SOURCE:-ai-workspace}:/workspace
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4111').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - llm-api
+      - mediavault-api
+
+networks:
+  llm-api:
+  mediavault-api:
+
+volumes:
+  mastra-data:
+  shares:
+  ai-workspace:

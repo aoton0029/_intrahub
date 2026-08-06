@@ -1,0 +1,31 @@
+name: intrahub-caddy-tls-cloudflare
+
+services:
+  caddy:
+    image: intrahub-caddy-cloudflare:2.11.4
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - path: .env
+        required: false
+    command: ["run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${CADDY_DATA_SOURCE:-caddy-tls-data}:/data
+      - ${CADDY_CONFIG_SOURCE:-caddy-tls-config}:/config
+      - ${CADDY_LOG_SOURCE:-caddy-tls-logs}:/var/log/caddy
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy-tls-data:
+  caddy-tls-config:
+  caddy-tls-logs:

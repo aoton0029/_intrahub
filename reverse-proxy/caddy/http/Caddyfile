@@ -1,0 +1,46 @@
+(intrahub) {
+    encode zstd gzip
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 100MiB
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+    }
+}
+
+http://mediavault.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8080
+}
+
+http://bookmarks.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8082
+}
+
+http://calibre.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8083
+}
+
+http://jellyfin.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8096
+}
+
+http://litellm.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:4000
+}
+
+http://mastra.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:4111
+}
+
+http://research.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:8000
+}

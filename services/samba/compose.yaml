@@ -1,0 +1,26 @@
+services:
+  samba:
+    image: dockurr/samba:4.23.8
+    restart: unless-stopped
+    environment:
+      NAME: Library
+      USER: ${SAMBA_USER:-intrahub}
+      PASS: ${SAMBA_PASSWORD:?SAMBA_PASSWORD is required}
+      UID: ${LIBRARY_UID:-1000}
+      GID: ${LIBRARY_GID:-1000}
+      RW: "true"
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:445:445"
+    volumes:
+      - ${LIBRARY_SOURCE:-shares}:/storage
+    healthcheck:
+      test: ["CMD-SHELL", "smbclient -L localhost -N >/dev/null 2>&1 || pgrep smbd >/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    # SambaはSMB機能にLinux capabilityを必要とするためcap_drop: ALLを適用しない。
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  shares:
