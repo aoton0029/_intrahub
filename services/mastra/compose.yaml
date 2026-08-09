@@ -8,7 +8,7 @@ services:
     restart: "no"
 
   mastra:
-    image: ghcr.io/aoton0029/intrahub-mastra:0.1.0
+    image: ghcr.io/aoton0029/intrahub-mastra:0.1.1
     restart: unless-stopped
     user: "${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000}"
     depends_on:
