@@ -1,6 +1,6 @@
 services:
   bookorbit-postgres:
-    image: pgvector/pgvector:pg18
+    image: pgvector/pgvector:pg18-trixie
     restart: unless-stopped
     environment:
       TZ: ${TZ:-UTC}
@@ -8,7 +8,7 @@ services:
       POSTGRES_DB: bookorbit
       POSTGRES_PASSWORD: ${BOOKORBIT_DB_PASSWORD:?BOOKORBIT_DB_PASSWORD is required}
     volumes:
-      - ${BOOKORBIT_DB_SOURCE:-bookorbit-db}:/var/lib/postgresql/data
+      - ${BOOKORBIT_DB_SOURCE:-bookorbit-db}:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-bookorbit} -d $${POSTGRES_DB:-bookorbit}"]
       interval: 10s
