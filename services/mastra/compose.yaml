@@ -21,6 +21,7 @@ services:
       LLM_MODEL: ${MASTRA_LLM_MODEL:-anthropic}
       LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY is required}
       TURSO_DATABASE_URL: file:/app/data/mastra.db
+      DUCKDB_PATH: /app/data/mastra.duckdb
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:4111:4111"
     volumes:
