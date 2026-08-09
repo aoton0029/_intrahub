@@ -1,8 +1,19 @@
 services:
+  mastra-data-init:
+    image: busybox
+    user: "0:0"
+    command: ["chown", "-R", "${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000}", "/app/data"]
+    volumes:
+      - ${MASTRA_DATA_SOURCE:-mastra-data}:/app/data
+    restart: "no"
+
   mastra:
     image: ghcr.io/aoton0029/intrahub-mastra:0.1.0
     restart: unless-stopped
     user: "${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000}"
+    depends_on:
+      mastra-data-init:
+        condition: service_completed_successfully
     environment:
       TZ: ${TZ:-UTC}
       LITELLM_BASE_URL: http://litellm:4000/v1
