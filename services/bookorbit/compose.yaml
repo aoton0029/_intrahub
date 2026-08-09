@@ -72,10 +72,12 @@ services:
       - no-new-privileges:true
     networks:
       - bookorbit-db
+      - bookorbit-egress
 
 networks:
   bookorbit-db:
     internal: true
+  bookorbit-egress:
 
 volumes:
   bookorbit-db:
