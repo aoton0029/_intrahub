@@ -1,0 +1,39 @@
+services:
+  netdata:
+    image: netdata/netdata:stable
+    restart: unless-stopped
+    hostname: minipc
+    pid: host
+    environment:
+      TZ: ${TZ:-UTC}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:19999:19999"
+    volumes:
+      - ${NETDATA_CONFIG_SOURCE:-netdata-config}:/etc/netdata
+      - ${NETDATA_LIB_SOURCE:-netdata-lib}:/var/lib/netdata
+      - ${NETDATA_CACHE_SOURCE:-netdata-cache}:/var/cache/netdata
+      - /:/host/root:ro,rslave
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor=unconfined
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities:
+                - gpu
+
+volumes:
+  netdata-config:
+  netdata-lib:
+  netdata-cache:

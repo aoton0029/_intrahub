@@ -44,3 +44,8 @@ http://research.{$CADDY_DOMAIN} {
     import intrahub
     reverse_proxy 127.0.0.1:8000
 }
+
+http://monitor.{$CADDY_DOMAIN} {
+    import intrahub
+    reverse_proxy 127.0.0.1:19999
+}
