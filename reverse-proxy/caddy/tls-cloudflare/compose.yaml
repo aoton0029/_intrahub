@@ -11,7 +11,7 @@ services:
     env_file:
       - path: .env
         required: false
-    command: ["run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ${CADDY_DATA_SOURCE:-caddy-tls-data}:/data
