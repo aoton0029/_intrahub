@@ -21,9 +21,10 @@ services:
   hermes-agent:
     image: nousresearch/hermes-agent:v2026.8.3
     restart: unless-stopped
-    user: "${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000}"
     environment:
       TZ: ${TZ:-UTC}
+      HERMES_UID: ${HERMES_UID:-1000}
+      HERMES_GID: ${HERMES_GID:-1000}
       HERMES_WRITE_SAFE_ROOT: /library
       LITELLM_BASE_URL: http://litellm:4000/v1
       MEDIAVAULT_API_BASE_URL: http://mediavault-api:8080
@@ -32,7 +33,7 @@ services:
       HERMES_DB_URL: postgresql://hermes:${HERMES_DB_PASSWORD:?HERMES_DB_PASSWORD is required}@hermes-postgres:5432/hermes
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     volumes:
-      - ${HERMES_DATA_SOURCE:-hermes-db}:/data
+      - ${HERMES_DATA_SOURCE:-hermes-db}:/opt/data
       - ${LIBRARY_SOURCE:-shares}:/library
       - ${AI_WORKSPACE_SOURCE:-ai-workspace}:/workspace
     depends_on:
@@ -44,8 +45,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    cap_drop:
-      - ALL
     security_opt:
       - no-new-privileges:true
     networks:
