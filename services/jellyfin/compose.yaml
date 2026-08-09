@@ -1,22 +1,11 @@
 services:
-  jellyfin-data-init:
-    image: busybox
-    user: "0:0"
-    command: ["sh", "-c", "chown -R ${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000} /config /cache"]
-    volumes:
-      - ${JELLYFIN_CONFIG_SOURCE:-jellyfin-config}:/config
-      - ${JELLYFIN_CACHE_SOURCE:-jellyfin-cache}:/cache
-    restart: "no"
-
   jellyfin:
-    image: jellyfin/jellyfin:10.11.11
+    image: lscr.io/linuxserver/jellyfin:10.11.11
     restart: unless-stopped
-    user: "${LIBRARY_UID:-1000}:${LIBRARY_GID:-1000}"
-    depends_on:
-      jellyfin-data-init:
-        condition: service_completed_successfully
     environment:
       TZ: ${TZ:-UTC}
+      PUID: ${LIBRARY_UID:-1000}
+      PGID: ${LIBRARY_GID:-1000}
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:8096:8096"
     volumes:
