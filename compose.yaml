@@ -4,7 +4,7 @@ name: intrahub
 include:
   - services/mediavault/compose.yaml
   - services/jellyfin/compose.yaml
-  - services/calibre-web/compose.yaml
+  - services/bookorbit/compose.yaml
   - services/samba/compose.yaml
   - services/bookmarks/compose.yaml
   - services/litellm/compose.yaml

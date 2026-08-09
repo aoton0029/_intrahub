@@ -27,9 +27,9 @@ bookmarks.{$CADDY_DOMAIN} {
     reverse_proxy 127.0.0.1:8082
 }
 
-calibre.{$CADDY_DOMAIN} {
+bookorbit.{$CADDY_DOMAIN} {
     import intrahub
-    reverse_proxy 127.0.0.1:8083
+    reverse_proxy 127.0.0.1:3000
 }
 
 jellyfin.{$CADDY_DOMAIN} {
