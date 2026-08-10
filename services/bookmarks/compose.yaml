@@ -11,11 +11,6 @@ services:
     volumes:
       - ../../services/bookmarks/config/config.yml:/config.yml:ro
       - ${BOOKMARKS_DATA_SOURCE:-bookmarks-data}:/data
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6065/"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
     security_opt:
       - no-new-privileges:true
 
