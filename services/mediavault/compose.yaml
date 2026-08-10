@@ -20,7 +20,7 @@ services:
       - media-db
 
   mediavault-api:
-    image: ghcr.io/aoton0029/intrahub-mediavault-api:0.1.1
+    image: ghcr.io/aoton0029/intrahub-mediavault-api:0.1.2
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://mediavault:${MEDIAVAULT_DB_PASSWORD:?MEDIAVAULT_DB_PASSWORD is required}@mediavault-postgres:5432/mediavault
@@ -53,7 +53,7 @@ services:
       - media-db
 
   mediavault-mcp:
-    image: ghcr.io/aoton0029/intrahub-mediavault-mcp:0.1.1
+    image: ghcr.io/aoton0029/intrahub-mediavault-mcp:0.1.2
     restart: unless-stopped
     environment:
       MCP_BIND_ADDR: 0.0.0.0:8081
@@ -76,7 +76,7 @@ services:
       - mediavault-api
 
   mediavault-web:
-    image: ghcr.io/aoton0029/intrahub-mediavault-web:0.1.1
+    image: ghcr.io/aoton0029/intrahub-mediavault-web:0.1.2
     restart: unless-stopped
     environment:
       TZ: ${TZ:-UTC}
