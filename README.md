@@ -2,6 +2,79 @@
 
 メディア管理とAIサービスを1台のLinuxホストで動かすDocker Compose構成です。設定はルートの`.env`へ集約し、DNS・TLS・Caddy等のリバースプロキシは利用者側で管理します。
 
+## 構成図
+
+```mermaid
+flowchart LR
+  client([利用者 / LAN クライアント])
+  proxy[/"Caddy（任意・別Compose）"/]
+
+  subgraph host["Linux ホスト（Docker Compose: intrahub）"]
+    subgraph pub["公開ポート"]
+      web["mediavault-web :8080"]
+      book["bookmarks (WebDAV) :8082"]
+      orbit["bookorbit-app :3000"]
+      jelly["jellyfin :8096"]
+      lite["litellm :4000"]
+      mastra["mastra :4111"]
+      net["netdata :19999"]
+      smb["samba :445"]
+      mcp["mediavault-mcp :8081"]
+      odr["open-deep-research :8000<br/>(compose.research.yaml)"]
+    end
+
+    subgraph internal["非公開サービス"]
+      api["mediavault-api"]
+      hermes["hermes-agent"]
+      vllm["vllm<br/>(compose.vllm.yaml / GPU)"]
+      mvdb[("mediavault-postgres")]
+      obdb[("bookorbit-postgres")]
+      hedb[("hermes-postgres")]
+      odrdb[("odr-postgres")]
+      odrredis[("odr-redis")]
+    end
+
+    lib[("LIBRARY_SOURCE<br/>共有ライブラリ")]
+    ws[("AI_WORKSPACE_SOURCE")]
+  end
+
+  ext([外部 LLM API / メタデータ API])
+
+  client --> proxy --> pub
+  client --> pub
+
+  web --> api
+  api --> mvdb
+  mcp --> api
+  orbit --> obdb
+  hermes --> hedb
+  odr --> odrdb
+  odr --> odrredis
+
+  mastra --> lite
+  hermes --> lite
+  odr --> lite
+  mastra --> api
+  hermes --> api
+  odr --> api
+  lite --> vllm
+  lite --> ext
+  api --> ext
+
+  jelly -. ro .-> lib
+  smb --> lib
+  orbit -. ro .-> lib
+  api --> lib
+  mastra --> lib
+  hermes --> lib
+  odr --> lib
+  mastra --> ws
+  hermes --> ws
+  odr --> ws
+```
+
+DB・Redisは`internal: true`のネットワークに閉じ、`litellm`／`mediavault-api`へは`llm-api`／`mediavault-api`ネットワーク経由でのみ到達します。公開ポートの待受アドレスは`.env`の`BIND_ADDRESS`（既定`127.0.0.1`）で決まり、`mediavault-mcp`のみ`MCP_BIND_ADDRESS`（既定`0.0.0.0`）です。
+
 ## 起動
 
 ```sh
