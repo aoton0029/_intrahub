@@ -18,8 +18,13 @@ services:
       TZ: ${TZ:-UTC}
       LITELLM_BASE_URL: http://litellm:4000/v1
       MEDIAVAULT_API_BASE_URL: http://mediavault-api:8080
+      MEDIAVAULT_MCP_URL: http://mediavault-mcp:8081
+      MEDIAVAULT_MCP_TOKEN: ${MCP_AUTH_TOKEN:?MCP_AUTH_TOKEN is required}
       LLM_MODEL: ${MASTRA_LLM_MODEL:-anthropic}
       LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY is required}
+      KNOWLEDGE_ROOT: /workspace
+      AI_WORKSPACE_DIR: /workspace/ai-workspace
+      SECOND_BRAIN_DIR: /workspace/second-brain
       TURSO_DATABASE_URL: file:/app/data/mastra.db
       DUCKDB_PATH: /app/data/mastra.duckdb
     ports:
@@ -27,7 +32,7 @@ services:
     volumes:
       - ${MASTRA_DATA_SOURCE:-mastra-data}:/app/data
       - ${LIBRARY_SOURCE:-shares}:/library
-      - ${AI_WORKSPACE_SOURCE:-ai-workspace}:/workspace
+      - ${KNOWLEDGE_SOURCE:-knowledge}:/workspace
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4111').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
       interval: 30s
@@ -47,4 +52,4 @@ networks:
 volumes:
   mastra-data:
   shares:
-  ai-workspace:
+  knowledge:

@@ -36,6 +36,7 @@ flowchart LR
 
     lib[("LIBRARY_SOURCE<br/>共有ライブラリ")]
     ws[("AI_WORKSPACE_SOURCE")]
+    kn[("KNOWLEDGE_SOURCE")]
   end
 
   ext([外部 LLM API / メタデータ API])
@@ -68,9 +69,10 @@ flowchart LR
   mastra --> lib
   hermes --> lib
   odr --> lib
-  mastra --> ws
+  mastra --> kn
   hermes --> ws
   odr --> ws
+  smb --> kn
 ```
 
 DB・Redisは`internal: true`のネットワークに閉じ、`litellm`／`mediavault-api`へは`llm-api`／`mediavault-api`ネットワーク経由でのみ到達します。公開ポートの待受アドレスは`.env`の`BIND_ADDRESS`（既定`127.0.0.1`）で決まり、`mediavault-mcp`のみ`MCP_BIND_ADDRESS`（既定`0.0.0.0`）です。
@@ -101,7 +103,7 @@ docker compose -f compose.yaml -f compose.vllm.yaml -f compose.research.yaml up 
 
 すべての永続データは`.env`の`*_SOURCE`で保存先を選択します。テンプレートの既定値はnamed volume、`/mnt/library`のような絶対パスはbind mountです。bind mountを使う場合は、起動前にホスト側ディレクトリと書込み権限を用意します。
 
-公開ポートはMediaVault `8080`、Bookmarks `8082`、BookOrbit `3000`、Jellyfin `8096`、LiteLLM `4000`、Mastra `4111`、Netdata `19999`、Samba `445`です。Research有効時だけODR `8000`を追加します。DB、Redis、MediaVault API、Hermes、vLLMはホストへ公開しません。
+公開ポートはMediaVault `8080`、MediaVault MCP `8081`、Bookmarks `8082`、BookOrbit `3000`、Jellyfin `8096`、LiteLLM `4000`、Mastra `4111`、Netdata `19999`、Samba `445`です。Research有効時だけODR `8000`を追加します。DB、Redis、MediaVault API、Hermes、vLLMはホストへ公開しません。
 
 サービス別の補足は`services/<name>/README.md`を参照してください。実環境固有のパス、DNS、リバースプロキシ、バックアップ手順はデプロイ先のリポジトリで管理します。
 

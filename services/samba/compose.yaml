@@ -3,16 +3,16 @@ services:
     image: dockurr/samba:4.23.8
     restart: unless-stopped
     environment:
-      NAME: Library
       USER: ${SAMBA_USER:-intrahub}
       PASS: ${SAMBA_PASSWORD:?SAMBA_PASSWORD is required}
       UID: ${LIBRARY_UID:-1000}
       GID: ${LIBRARY_GID:-1000}
-      RW: "true"
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:445:445"
     volumes:
+      - ../../services/samba/config/smb.conf:/etc/samba/smb.conf:ro
       - ${LIBRARY_SOURCE:-shares}:/storage
+      - ${KNOWLEDGE_SOURCE:-knowledge}:/knowledge
     healthcheck:
       test: ["CMD-SHELL", "smbclient -L localhost -N >/dev/null 2>&1 || pgrep smbd >/dev/null"]
       interval: 30s
@@ -24,3 +24,4 @@ services:
 
 volumes:
   shares:
+  knowledge:
