@@ -7,110 +7,89 @@
 ```mermaid
 flowchart LR
   client([利用者 / LAN クライアント])
-  proxy[/"Caddy（任意・別Compose）"/]
 
   subgraph host["Linux ホスト（Docker Compose: intrahub）"]
-    subgraph pub["公開ポート"]
-      web["mediavault-web :8080"]
-      book["bookmarks (WebDAV) :8082"]
-      orbit["bookorbit-app :3000"]
-      jelly["jellyfin :8096"]
-      lite["litellm :4000"]
-      mastra["mastra :4111"]
-      net["netdata :19999"]
-      smb["samba :445"]
-      mcp["mediavault-mcp :8081"]
-      odr["open-deep-research :8000<br/>(compose.research.yaml)"]
-    end
+    media["メディア管理・視聴"]
+    books["書籍・コミック"]
+    files["ファイル共有 / ブックマーク同期"]
+    ai["AI エージェント・調査"]
+    llm["LLM ゲートウェイ<br/>（外部 API / ローカル GPU）"]
+    mon["モニタリング"]
 
-    subgraph internal["非公開サービス"]
-      api["mediavault-api"]
-      hermes["hermes-agent"]
-      vllm["vllm<br/>(compose.vllm.yaml / GPU)"]
-      mvdb[("mediavault-postgres")]
-      obdb[("bookorbit-postgres")]
-      hedb[("hermes-postgres")]
-      odrdb[("odr-postgres")]
-      odrredis[("odr-redis")]
-    end
-
-    lib[("LIBRARY_SOURCE<br/>共有ライブラリ")]
-    ws[("AI_WORKSPACE_SOURCE")]
-    kn[("KNOWLEDGE_SOURCE")]
+    lib[("共有ライブラリ")]
+    kn[("ナレッジ / ワークスペース")]
   end
 
   ext([外部 LLM API / メタデータ API])
 
-  client --> proxy --> pub
-  client --> pub
-
-  web --> api
-  api --> mvdb
-  mcp --> api
-  orbit --> obdb
-  hermes --> hedb
-  odr --> odrdb
-  odr --> odrredis
-
-  mastra --> lite
-  hermes --> lite
-  odr --> lite
-  mastra --> api
-  hermes --> api
-  odr --> api
-  lite --> vllm
-  lite --> ext
-  api --> ext
-
-  jelly -. ro .-> lib
-  smb --> lib
-  orbit -. ro .-> lib
-  api --> lib
-  mastra --> lib
-  hermes --> lib
-  odr --> lib
-  mastra --> kn
-  hermes --> ws
-  odr --> ws
-  smb --> kn
+  client --> media & books & files & ai & mon
+  media --> lib
+  books -. ro .-> lib
+  files --> lib & kn
+  ai --> llm
+  ai --> media
+  ai --> lib & kn
+  llm --> ext
+  media --> ext
 ```
 
-DB・Redisは`internal: true`のネットワークに閉じ、`litellm`／`mediavault-api`へは`llm-api`／`mediavault-api`ネットワーク経由でのみ到達します。公開ポートの待受アドレスは`.env`の`BIND_ADDRESS`（既定`127.0.0.1`）で決まり、`mediavault-mcp`のみ`MCP_BIND_ADDRESS`（既定`0.0.0.0`）です。
+各サービスのデータは専用のデータベースへ保存し、DBはいずれも`internal: true`のネットワークに閉じてホストへ公開しません。公開ポートの待受アドレスは`.env`の`BIND_ADDRESS`（既定`127.0.0.1`）で決まり、`mediavault-mcp`のみ`MCP_BIND_ADDRESS`（既定`0.0.0.0`）です。
 
-## コンテナの機能・役割
+## できること
 
-### 標準構成
+### メディアの管理と視聴
 
-| コンテナ | 機能・役割 | 公開・主な接続先／データ |
-| --- | --- | --- |
-| `mediavault-web` | MediaVaultのWeb UIを提供するフロントエンド | `:8080`で公開。`mediavault-api`へ接続 |
-| `mediavault-api` | メディア情報、ライブラリ操作、外部メタデータAPI連携を担うMediaVaultの内部API | ホストへ非公開。`mediavault-postgres`、共有ライブラリ、MediaVaultストレージを使用 |
-| `mediavault-mcp` | AIクライアント向けにMediaVaultの検索・参照機能をMCPとして公開 | `:8081`で公開しBearerトークンで認証。`mediavault-api`へ接続 |
-| `mediavault-postgres` | MediaVaultのメタデータを永続化する専用PostgreSQL | ホストへ非公開。`media-db`内部ネットワークに限定 |
-| `jellyfin-data-init` | Jellyfinの設定・キャッシュ領域を実行UID/GIDで利用できるよう所有者を設定 | 初期化完了後に終了 |
-| `jellyfin` | 共有ライブラリの動画・音楽などを配信・再生するメディアサーバー | `:8096`で公開。共有ライブラリはread-only |
-| `bookorbit-app` | 書籍・コミックの管理、検索、Webリーダーを提供 | `:3000`で公開。`bookorbit-postgres`へ接続し、共有ライブラリはread-only |
-| `bookorbit-postgres` | BookOrbitの書誌情報やアプリデータを永続化するpgvector対応PostgreSQL | ホストへ非公開。`bookorbit-db`内部ネットワークに限定 |
-| `samba` | 共有ライブラリとナレッジ領域をLANクライアントへSMB共有 | `:445`で公開。`Library`と`Knowledge`をread-writeで共有 |
-| `bookmarks` | ブックマークデータを保存・同期するWebDAVサーバー | `:8082`で公開しBasic認証を使用。データ領域を`/data`へ永続化 |
-| `litellm` | 外部LLMと任意のvLLMを共通のOpenAI互換API・論理モデル名で中継 | `:4000`で公開。AIサービスから`llm-api`経由で利用 |
-| `mastra-data-init` | Mastraのデータ領域を実行UID/GIDで利用できるよう所有者を設定 | 初期化完了後に終了 |
-| `mastra` | LLMエージェントとワークフローを実行し、ライブラリやナレッジを処理 | `:4111`で公開。LiteLLM、MediaVault API/MCPへ接続し、ライブラリとナレッジ領域をread-writeで使用 |
-| `hermes-agent` | バックグラウンドでAIエージェント処理を行う内部ワーカー | ホストへ非公開。LiteLLM、MediaVault API、`hermes-postgres`へ接続し、ライブラリとAIワークスペースをread-writeで使用 |
-| `hermes-postgres` | Hermes Agentの状態や履歴を永続化する専用PostgreSQL | ホストへ非公開。`hermes-db`内部ネットワークに限定 |
-| `netdata` | Linuxホスト、Dockerコンテナ、NVIDIA GPUのメトリクスを収集・可視化 | `:19999`で公開。ホストPID、Docker socket、`/proc`、`/sys`を監視目的で参照 |
+MediaVaultのWeb UIから、共有ライブラリのメディアを登録・検索・閲覧できます。外部メタデータAPIと連携して情報を補完します。同じライブラリの動画・音楽はJellyfinでストリーミング再生でき、Jellyfin側はライブラリをread-onlyで参照します。
 
-### 拡張構成
+`http://127.0.0.1:8080`（MediaVault）／`http://127.0.0.1:8096`（Jellyfin）
 
-| コンテナ | 有効化 | 機能・役割 | 公開・主な接続先／データ |
-| --- | --- | --- | --- |
-| `vllm-init` | `compose.vllm.yaml` | モデルキャッシュ領域をvLLMの実行ユーザーで利用できるよう所有者を設定 | 初期化完了後に終了 |
-| `vllm` | `compose.vllm.yaml` | NVIDIA GPU上でローカルLLMを実行するOpenAI互換推論バックエンド | ホストへ非公開。`llm-api`上でLiteLLMから利用し、モデルキャッシュを永続化 |
-| `open-deep-research` | `compose.research.yaml` | LLMと検索APIを使った長時間の調査処理を実行 | `:8000`で公開。LiteLLM、MediaVault API、専用PostgreSQL/Redisへ接続し、ライブラリとAIワークスペースをread-writeで使用 |
-| `odr-postgres` | `compose.research.yaml` | Open Deep Researchの調査データを永続化する専用PostgreSQL | ホストへ非公開。`research-data`内部ネットワークに限定 |
-| `odr-redis` | `compose.research.yaml` | Open Deep Researchのジョブ状態や一時データを保持するRedis | ホストへ非公開。`research-data`内部ネットワークに限定し、AOFで永続化 |
+### 書籍・コミックの閲覧
 
-`*-data-init`と`vllm-init`は常駐サービスではなく、対象ボリュームの準備に成功すると終了します。Caddyは上表の対象外で、必要な場合だけ`reverse-proxy/caddy`の別Composeとして起動します。
+BookOrbitで書誌情報の管理と検索を行い、cbz/cbr/cb7のコミックは組み込みリーダーでそのまま閲覧できます。初回アクセス時は`SETUP_BOOTSTRAP_TOKEN`を使ったセットアップウィザードで管理者アカウントを作成します。共有ライブラリはread-onlyで参照します。
+
+`http://127.0.0.1:3000`
+
+### LANからのファイル共有
+
+Sambaが共有ライブラリを`Library`、ナレッジ領域を`Knowledge`としてread-writeで公開します。Web UIを介さずに、LANのクライアントからファイルを直接追加・整理できます。
+
+`smb://127.0.0.1/Library`、`smb://127.0.0.1/Knowledge`（:445）
+
+### ブックマークの同期
+
+Basic認証付きのWebDAVサーバーでブックマークデータを保存・同期します。認証情報は`.env`の`BOOKMARKS_USER`と`BOOKMARKS_PASSWORD`で設定します。
+
+`http://127.0.0.1:8082`
+
+### LLMの共通入口
+
+LiteLLMが`anthropic`、`openai`、`vllm`という論理モデル名でOpenAI互換APIを提供します。AIサービス側は`MASTRA_LLM_MODEL`などの`*_LLM_MODEL`の値を変えるだけで、外部APIとローカル推論を切り替えられます。`compose.vllm.yaml`を追加するとNVIDIA GPU上のvLLMが起動し、論理モデル名`vllm`の実体になります。
+
+`http://127.0.0.1:4000/v1`
+
+### AIエージェントによる処理
+
+Mastraでエージェントとワークフローを実行し、Hermes Agentがバックグラウンドで常時処理を進めます。どちらも共有ライブラリとナレッジ／ワークスペースをread-writeで扱い、LiteLLM経由でLLMを、MediaVaultの内部API経由でメディア情報を利用します。利用できるエージェントやワークフローはMastraアプリ側に実装されたものに限ります。
+
+`http://127.0.0.1:4111`（Mastra。Hermesはホストへ公開しません）
+
+### AIクライアントからのライブラリ参照（MCP）
+
+MediaVault MCPが`search_library`、`get_item_context`、`get_item_text`のRead OnlyツールをBearerトークン付きで公開します。Mastraのエージェントに加えて、外部のAIクライアントからもライブラリを検索・参照できます。
+
+`http://<host>:8081`（`MCP_AUTH_TOKEN`で認証）
+
+### 長時間の調査（拡張）
+
+`compose.research.yaml`を追加するとOpen Deep Researchが有効になり、LLMと検索APIを使った長時間の調査処理を実行して、結果をワークスペースへ出力します。
+
+`http://127.0.0.1:8000`
+
+### モニタリング
+
+Netdataがホスト、Dockerコンテナ、NVIDIA GPUのメトリクスを収集して可視化します。GPU監視にはホストのNVIDIA driverとContainer Toolkitが必要です。ダッシュボードはインターネットへ直接公開しないでください。
+
+`http://127.0.0.1:19999`
 
 ## 起動
 
@@ -138,7 +117,24 @@ docker compose -f compose.yaml -f compose.vllm.yaml -f compose.research.yaml up 
 
 すべての永続データは`.env`の`*_SOURCE`で保存先を選択します。テンプレートの既定値はnamed volume、`/mnt/library`のような絶対パスはbind mountです。bind mountを使う場合は、起動前にホスト側ディレクトリと書込み権限を用意します。
 
-公開ポートはMediaVault `8080`、MediaVault MCP `8081`、Bookmarks `8082`、BookOrbit `3000`、Jellyfin `8096`、LiteLLM `4000`、Mastra `4111`、Netdata `19999`、Samba `445`です。Research有効時だけODR `8000`を追加します。DB、Redis、MediaVault API、Hermes、vLLMはホストへ公開しません。
+## サービス早見表
+
+| 機能 | 主なコンテナ | ポート | 有効化 |
+| --- | --- | --- | --- |
+| メディア管理 | `mediavault-web` | 8080 | 標準 |
+| メディア参照（MCP） | `mediavault-mcp` | 8081 | 標準 |
+| メディア再生 | `jellyfin` | 8096 | 標準 |
+| 書籍・コミック | `bookorbit-app` | 3000 | 標準 |
+| ファイル共有 | `samba` | 445 | 標準 |
+| ブックマーク同期 | `bookmarks` | 8082 | 標準 |
+| LLMゲートウェイ | `litellm` | 4000 | 標準 |
+| AIエージェント | `mastra` | 4111 | 標準 |
+| モニタリング | `netdata` | 19999 | 標準 |
+| バックグラウンド処理 | `hermes-agent` | 非公開 | 標準 |
+| ローカル推論 | `vllm` | 非公開 | `compose.vllm.yaml` |
+| 調査 | `open-deep-research` | 8000 | `compose.research.yaml` |
+
+`mediavault-api`、各サービスのPostgreSQL／Redisはホストへ公開しません。Caddyは上表の対象外で、必要な場合だけ`reverse-proxy/caddy`の別Composeとして起動します。
 
 サービス別の補足は`services/<name>/README.md`を参照してください。実環境固有のパス、DNS、リバースプロキシ、バックアップ手順はデプロイ先のリポジトリで管理します。
 
