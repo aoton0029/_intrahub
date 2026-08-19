@@ -1,6 +1,5 @@
 name: intrahub
 
-# DNS、TLS、リバースプロキシ、GPU、Researchを要求しない標準構成。
 include:
   - services/mediavault/compose.yaml
   - services/jellyfin/compose.yaml

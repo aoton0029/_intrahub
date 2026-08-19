@@ -20,7 +20,7 @@ services:
       - media-db
 
   mediavault-api:
-    image: ghcr.io/aoton0029/intrahub-mediavault-api:0.1.3
+    image: ghcr.io/aoton0029/intrahub-mediavault-api:0.1.4
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://mediavault:${MEDIAVAULT_DB_PASSWORD:?MEDIAVAULT_DB_PASSWORD is required}@mediavault-postgres:5432/mediavault
@@ -34,6 +34,7 @@ services:
       RAKUTEN_ACCESS_KEY: ${RAKUTEN_ACCESS_KEY:-}
       STORAGE_ROOT: /srv/mediavault
       LIBRARY_ROOT: /library
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY is required}
       CORS_ALLOWED_ORIGIN: ${MEDIAVAULT_ALLOWED_ORIGIN:-http://127.0.0.1:8080}
     volumes:
       - ${MEDIAVAULT_STORAGE_SOURCE:-mediavault-storage}:/srv/mediavault
@@ -42,18 +43,20 @@ services:
       mediavault-postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/v1/health"]
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://localhost:8080/api/v1/health"]
       interval: 15s
       timeout: 5s
       retries: 10
     security_opt:
       - no-new-privileges:true
     networks:
-      - mediavault-api
-      - media-db
+      mediavault-api:
+        aliases:
+          - backend
+      media-db:
 
   mediavault-mcp:
-    image: ghcr.io/aoton0029/intrahub-mediavault-mcp:0.1.3
+    image: ghcr.io/aoton0029/intrahub-mediavault-mcp:0.1.4
     restart: unless-stopped
     environment:
       MCP_BIND_ADDR: 0.0.0.0:8081
@@ -66,7 +69,7 @@ services:
     depends_on:
       - mediavault-api
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8081/healthz"]
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://localhost:8081/healthz"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -75,8 +78,33 @@ services:
     networks:
       - mediavault-api
 
+  mediavault-extractor:
+    image: ghcr.io/aoton0029/intrahub-mediavault-extractor:0.1.4
+    restart: unless-stopped
+    environment:
+      MEDIAVAULT_API_BASE_URL: http://mediavault-api:8080
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY is required}
+      EXTRACTOR_LIBRARY_ROOT: /library
+      EXTRACTOR_STORAGE_ROOT: /srv/mediavault
+      EXTRACTOR_OCR_DEVICE: ${EXTRACTOR_OCR_DEVICE:-cpu}
+      EXTRACTOR_MAX_CONCURRENCY: ${EXTRACTOR_MAX_CONCURRENCY:-1}
+      EXTRACTOR_POLL_INTERVAL_SEC: ${EXTRACTOR_POLL_INTERVAL_SEC:-5}
+      EXTRACTOR_HEARTBEAT_INTERVAL_SEC: ${EXTRACTOR_HEARTBEAT_INTERVAL_SEC:-30}
+      EXTRACTOR_LEASE_SECONDS: ${EXTRACTOR_LEASE_SECONDS:-300}
+      EXTRACTOR_JOB_TIMEOUT_SEC: ${EXTRACTOR_JOB_TIMEOUT_SEC:-3600}
+    volumes:
+      - ${MEDIAVAULT_STORAGE_SOURCE:-mediavault-storage}:/srv/mediavault:ro
+      - ${LIBRARY_SOURCE:-shares}:/library:ro
+    depends_on:
+      mediavault-api:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mediavault-api
+
   mediavault-web:
-    image: ghcr.io/aoton0029/intrahub-mediavault-web:0.1.3
+    image: ghcr.io/aoton0029/intrahub-mediavault-web:0.1.4
     restart: unless-stopped
     environment:
       TZ: ${TZ:-UTC}
@@ -86,7 +114,7 @@ services:
       mediavault-api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 5s
       retries: 5
