@@ -1,0 +1,14 @@
+# 中間データはVaultの正本ではないため履歴に残さない。
+ai-workspace/
+
+# tech-notes は独立したGitリポジトリ。クローンまたはマウントで配置する。
+tech-notes/
+
+# Obsidianの端末固有の状態。
+second-brain/.obsidian/workspace.json
+second-brain/.obsidian/workspace-mobile.json
+second-brain/.obsidian/cache
+second-brain/.trash/
+
+.DS_Store
+Thumbs.db

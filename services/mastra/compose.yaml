@@ -14,6 +14,8 @@ services:
     depends_on:
       mastra-data-init:
         condition: service_completed_successfully
+      knowledge-init:
+        condition: service_completed_successfully
     environment:
       TZ: ${TZ:-UTC}
       LITELLM_BASE_URL: http://litellm:4000/v1

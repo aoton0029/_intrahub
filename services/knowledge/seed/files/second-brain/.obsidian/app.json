@@ -1,0 +1,8 @@
+{
+  "newLinkFormat": "absolute",
+  "useMarkdownLinks": false,
+  "attachmentFolderPath": "Attachments",
+  "alwaysUpdateLinks": true,
+  "showFrontmatter": true,
+  "userIgnoreFilters": []
+}

@@ -1,6 +1,7 @@
 name: intrahub
 
 include:
+  - services/knowledge/compose.yaml
   - services/mediavault/compose.yaml
   - services/jellyfin/compose.yaml
   - services/bookorbit/compose.yaml

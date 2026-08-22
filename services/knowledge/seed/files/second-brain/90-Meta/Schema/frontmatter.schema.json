@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intrahub.local/knowledge/frontmatter.schema.json",
+  "title": "second-brain frontmatter",
+  "description": "Knowledge Vault (second-brain) の全ノートが持つfrontmatter。正本の規約はVaultルートのREADME.md「メタデータと出典」節にあり、本スキーマはそれを機械可読にしたもの。両者が食い違った場合はREADME.mdを正とし、本ファイルを直す。",
+  "type": "object",
+  "required": ["id", "title", "type", "status", "owner"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "ノートの永続ID。採番規則（ULIDか連番か、ファイル名・パスとの関係）はVault側で未確定のため、接頭辞のみを検査する暫定パターンにしてある。確定したら厳密化する。",
+      "pattern": "^kv_[A-Za-z0-9_-]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "正式な題名。ファイル名から除去した記号を含む場合がある。"
+    },
+    "type": {
+      "$ref": "#/$defs/noteType"
+    },
+    "aliases": {
+      "type": "array",
+      "description": "原語、英語表記、略称、別表記。ファイル名には持ち込まない。",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    },
+    "categories": {
+      "type": "array",
+      "description": "少数の大分類。語彙は 90-Meta/Schema/taxonomy.yaml で管理する。",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    },
+    "tags": {
+      "type": "array",
+      "description": "横断検索に使用する特徴語。本文と出典に根拠があるものだけを付ける。",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    },
+    "status": { "$ref": "#/$defs/status" },
+    "owner": { "$ref": "#/$defs/owner" },
+    "sources": {
+      "type": "array",
+      "description": "出典。配列の添字を source_refs から参照する。",
+      "items": { "$ref": "#/$defs/source" },
+      "default": []
+    },
+    "source_refs": {
+      "type": "array",
+      "description": "本文の記述と出典内の位置の対応。",
+      "items": { "$ref": "#/$defs/sourceRef" },
+      "default": []
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "authors": {
+      "type": "array",
+      "description": "paper / academic_book の著者を原表記のまま順序どおりに保持する。ディレクトリ名は筆頭著者のみだが、こちらは全員。",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "year": {
+      "type": "integer",
+      "description": "参照している版の西暦。原著の刊行年ではない。",
+      "minimum": 1
+    },
+    "item_id": {
+      "type": "string",
+      "description": "MediaVault 上の資料ID。ノートとMediaVaultの対応は名前ではなくこの値で保つ。"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "work" } }, "required": ["type"] },
+      "then": { "required": ["sources"] }
+    },
+    {
+      "if": { "properties": { "type": { "const": "episode" } }, "required": ["type"] },
+      "then": { "required": ["sources"] }
+    },
+    {
+      "if": { "properties": { "type": { "const": "paper" } }, "required": ["type"] },
+      "then": { "required": ["sources", "authors", "year"] }
+    },
+    {
+      "if": { "properties": { "type": { "const": "academic_book" } }, "required": ["type"] },
+      "then": { "required": ["sources", "authors", "year"] }
+    },
+    {
+      "if": { "properties": { "type": { "const": "chapter" } }, "required": ["type"] },
+      "then": { "required": ["sources", "source_refs"] }
+    }
+  ],
+  "$defs": {
+    "noteType": {
+      "type": "string",
+      "description": "ノートの構造を決める種別。ディレクトリではなくこの値が種別の正本。",
+      "enum": [
+        "work",
+        "episode",
+        "paper",
+        "academic_book",
+        "chapter",
+        "concept",
+        "theme",
+        "person",
+        "comparison",
+        "timeline",
+        "essay"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "review_needed", "reviewed", "human_verified", "stale"],
+      "description": "draft=AI生成直後 / review_needed=出典不足・推定・競合あり / reviewed=機械的な検証を通過 / human_verified=人間が確認済み（再生成の対象外） / stale=出典参照が失効"
+    },
+    "owner": {
+      "type": "string",
+      "enum": ["ai", "human"],
+      "description": "human のノートをAIが上書きしてはならない。"
+    },
+    "source": {
+      "oneOf": [
+        { "$ref": "#/$defs/mediavaultSource" },
+        { "$ref": "#/$defs/webSource" }
+      ]
+    },
+    "mediavaultSource": {
+      "type": "object",
+      "required": ["kind", "item_id"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "mediavault" },
+        "item_id": { "type": "string", "minLength": 1 },
+        "file_id": { "type": "string", "minLength": 1 },
+        "extraction_version": {
+          "type": "string",
+          "description": "抽出処理のバージョン。変化した場合、既存参照を自動的に読み替えず再確認対象にする。"
+        },
+        "title": { "type": "string" }
+      }
+    },
+    "webSource": {
+      "type": "object",
+      "required": ["kind", "url", "retrieved"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "web" },
+        "url": { "type": "string", "format": "uri" },
+        "retrieved": {
+          "type": "string",
+          "format": "date",
+          "description": "取得日。ページ内容が変わり得るため必須。"
+        },
+        "title": { "type": "string" }
+      }
+    },
+    "sourceRef": {
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "sources 配列の添字。"
+        },
+        "chunk_index": { "type": "integer", "minimum": 0 },
+        "label": {
+          "type": "string",
+          "description": "ページや章の表示用。追跡の同一性判定には使わない。"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "生成の来歴。AIが書いたノートには必ず付ける。",
+      "additionalProperties": false,
+      "properties": {
+        "workflow": { "type": "string" },
+        "run_id": { "type": "string" },
+        "model": { "type": "string" },
+        "generated_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

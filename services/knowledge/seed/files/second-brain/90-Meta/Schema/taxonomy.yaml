@@ -1,0 +1,46 @@
+# second-brain の categories / tags の正規語彙。
+#
+# ここは人間の領域。AIは読むだけで、変更は提案に留める（AGENTS.md）。
+# 未登録語は直ちに正式タグにせず、proposals へ蓄積して人間が採否を決める。
+#
+# 語彙そのものは運用しながら育てる。初期値は最小限に留めてあり、
+# 「使いそう」という理由で先回りして増やさない。使われない語彙は
+# 表記揺れの温床になるだけで、検索の役に立たない。
+
+version: 1
+
+# 少数の大分類。frontmatter の categories に入れられるのはここにある語だけ。
+# 20-Knowledge 配下のディレクトリ名との対応規則は未確定。
+categories:
+  - id: philosophy
+    label: 哲学・思想
+  - id: religion
+    label: 宗教
+  - id: literature
+    label: 文学・作品
+  - id: science
+    label: 科学
+  - id: engineering
+    label: 工学・技術
+  - id: history
+    label: 歴史
+  - id: society
+    label: 社会・政治
+
+# 横断検索に使う特徴語。aliases は同義語で、AIは正規形へ寄せてから付与する。
+tags:
+  - id: buddhism
+    label: 仏教
+    aliases: [佛教, Buddhism]
+  - id: epistemology
+    label: 認識論
+    aliases: [Epistemology, 知識論]
+  - id: consciousness
+    label: 意識
+    aliases: [Consciousness, 心の哲学]
+
+# AIが見つけた未登録語の置き場。人間が採否を決め、採用したものを tags へ移す。
+# 却下したものは rejected へ移し、同じ語が繰り返し提案されるのを防ぐ。
+proposals: []
+
+rejected: []

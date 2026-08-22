@@ -1,0 +1,22 @@
+services:
+  knowledge-init:
+    image: alpine/git:2.49.1
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/init.sh"]
+    environment:
+      TZ: ${TZ:-UTC}
+      SEED_DIR: /seed
+      VAULT_DIR: /vault
+      LIBRARY_UID: ${LIBRARY_UID:-1000}
+      LIBRARY_GID: ${LIBRARY_GID:-1000}
+      KNOWLEDGE_SEED_FORCE: ${KNOWLEDGE_SEED_FORCE:-false}
+    volumes:
+      - ../../services/knowledge/init.sh:/init.sh:ro
+      - ../../services/knowledge/seed:/seed:ro
+      - ${KNOWLEDGE_SOURCE:-knowledge}:/vault
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  knowledge:

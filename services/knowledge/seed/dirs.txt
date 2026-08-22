@@ -1,0 +1,18 @@
+# Knowledge Vault のディレクトリ骨格。
+# 無ければ作る。既にあれば触らない。ここから削除しても Vault 側は消えない。
+# 空ディレクトリを Git が保持できるよう、各ディレクトリへ .gitkeep を置く。
+ai-workspace
+second-brain/00-Inbox
+second-brain/10-Sources/Works
+second-brain/10-Sources/Papers
+second-brain/10-Sources/Academic-Books
+second-brain/20-Knowledge/Concepts
+second-brain/20-Knowledge/Themes
+second-brain/20-Knowledge/People
+second-brain/20-Knowledge/Organizations
+second-brain/20-Knowledge/Events
+second-brain/30-Syntheses
+second-brain/40-Maps
+second-brain/90-Meta/Schema
+second-brain/90-Meta/Templates
+second-brain/Attachments
